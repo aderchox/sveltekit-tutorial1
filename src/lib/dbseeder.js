@@ -1,5 +1,7 @@
 import db from "./db.js";
 import { faker } from "@faker-js/faker";
+import bcrypt from "bcrypt";
+import "dotenv/config";
 
 faker.seed(123);
 
@@ -46,8 +48,8 @@ dgdata_stmt.run([1, 6, faker.number.binary()]);
 dgdata_stmt.run([1, 7, faker.location.streetAddress(true)]);
 dgdata_stmt.run([1, 8, faker.person.jobType()]);
 dgdata_stmt.run([1, 9, faker.date.past()]);
-dgdata_stmt.run([1, 10, faker.word.words(3).split(" ")]);
-dgdata_stmt.run([1, 11, faker.word.words(7).split(" ")]);
+dgdata_stmt.run([1, 10, faker.word.words(3).split(" ").join(", ")]);
+dgdata_stmt.run([1, 11, faker.word.words(7).split(" ").join(", ")]);
 
 dgdata_stmt.run([2, 1, faker.person.firstName()]);
 dgdata_stmt.run([2, 2, faker.person.lastName()]);
@@ -61,13 +63,17 @@ dgdata_stmt.run([3, 3, faker.internet.exampleEmail()]);
 dgdata_stmt.run([3, 4, faker.phone.number()]);
 dgdata_stmt.run([3, 5, faker.number.int(100)]);
 
+const admin_hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+const testuser_hash = await bcrypt.hash("123", 10);
+const ro_user_hash = await bcrypt.hash("123", 10);
+
 const user_stmt = db.prepare(
   "INSERT INTO user (username, password, email, access_level, first_name, last_name, code_melli, creator_id, date_created, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 // Default main (root) admin (with access to everything)
 user_stmt.run([
   process.env.ADMIN_USERNAME,
-  "[hash from dotenv]",
+  admin_hash,
   process.env.ADMIN_EMAIL,
   2,
   "admin",
@@ -80,7 +86,7 @@ user_stmt.run([
 // Sub-admin user (read & write, without access to user management and reports)
 user_stmt.run([
   "testuser",
-  "[hash]",
+  testuser_hash,
   "testuser@example.com",
   1,
   "testuser",
@@ -93,7 +99,7 @@ user_stmt.run([
 // Read-only user:
 user_stmt.run([
   "test_ro_user",
-  "[hash]",
+  ro_user_hash,
   "test_ro_user@example.com",
   0,
   "test_ro_user",
